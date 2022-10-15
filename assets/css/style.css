@@ -1,0 +1,22 @@
+.avatars {
+  display: flex;
+}
+.avatars .avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  -o-object-fit: cover;
+     object-fit: cover;
+  border: 1px solid red;
+}
+.avatars :not(:first-child) {
+  margin-left: -50px;
+}
+.avatars .rating {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background-color: rgb(238, 225, 225);
+  font-size: 50px;
+}/*# sourceMappingURL=style.css.map */
