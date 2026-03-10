@@ -1,11 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Goal } from "@/lib/database.types"
+import { formatCurrency } from "@/lib/types"
 import { Plus, Target, Trash2 } from "lucide-react"
 import {
   Dialog,
@@ -16,77 +15,79 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
-import { addGoal, deleteGoal, updateGoalAmount } from "@/app/actions"
 
-interface GoalsViewProps {
-  goals: Goal[]
+interface Goal {
+  id: string
+  name: string
+  target: number
+  current: number
+  deadline: string
+  icon: string
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
+const initialGoals: Goal[] = [
+  {
+    id: '1',
+    name: 'Quỹ khẩn cấp',
+    target: 50000000,
+    current: 28000000,
+    deadline: '2026-12-31',
+    icon: '🏦',
+  },
+  {
+    id: '2',
+    name: 'Du lịch Nhật Bản',
+    target: 30000000,
+    current: 12000000,
+    deadline: '2026-06-30',
+    icon: '✈️',
+  },
+  {
+    id: '3',
+    name: 'Mua laptop mới',
+    target: 25000000,
+    current: 22000000,
+    deadline: '2026-04-30',
+    icon: '💻',
+  },
+]
 
 const iconOptions = ['🏦', '✈️', '💻', '🏠', '🚗', '📚', '💍', '🎓', '💰', '🎁']
 
-export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
-  const [goals, setGoals] = useState(initialGoals)
+export function GoalsView() {
+  const [goals, setGoals] = useState<Goal[]>(initialGoals)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [addAmountDialog, setAddAmountDialog] = useState<string | null>(null)
-  const [addAmount, setAddAmount] = useState('')
-  const [loading, setLoading] = useState(false)
   const [newGoal, setNewGoal] = useState({
     name: '',
     target: '',
+    current: '',
     deadline: '',
+    icon: '💰',
   })
-  const router = useRouter()
 
-  const handleAddGoal = async () => {
+  const handleAddGoal = () => {
     if (!newGoal.name || !newGoal.target) return
 
-    setLoading(true)
-    const result = await addGoal({
+    const goal: Goal = {
+      id: Date.now().toString(),
       name: newGoal.name,
-      target_amount: parseFloat(newGoal.target),
-      deadline: newGoal.deadline || undefined,
-    })
-
-    if (result.success) {
-      setNewGoal({ name: '', target: '', deadline: '' })
-      setDialogOpen(false)
-      router.refresh()
+      target: parseFloat(newGoal.target),
+      current: parseFloat(newGoal.current) || 0,
+      deadline: newGoal.deadline || '',
+      icon: newGoal.icon,
     }
-    setLoading(false)
+
+    setGoals([...goals, goal])
+    setNewGoal({ name: '', target: '', current: '', deadline: '', icon: '💰' })
+    setDialogOpen(false)
   }
 
-  const handleDeleteGoal = async (id: string) => {
-    if (!confirm('Bạn có chắc muốn xóa mục tiêu này?')) return
-    
-    const result = await deleteGoal(id)
-    if (result.success) {
-      setGoals(goals.filter(g => g.id !== id))
-    }
+  const handleDeleteGoal = (id: string) => {
+    setGoals(goals.filter(g => g.id !== id))
   }
 
-  const handleAddAmount = async (goalId: string) => {
-    if (!addAmount) return
-    
-    setLoading(true)
-    const result = await updateGoalAmount(goalId, parseFloat(addAmount))
-    if (result.success) {
-      setAddAmountDialog(null)
-      setAddAmount('')
-      router.refresh()
-    }
-    setLoading(false)
-  }
-
-  const totalTarget = goals.reduce((sum, g) => sum + Number(g.target_amount), 0)
-  const totalCurrent = goals.reduce((sum, g) => sum + Number(g.current_amount), 0)
+  const totalTarget = goals.reduce((sum, g) => sum + g.target, 0)
+  const totalCurrent = goals.reduce((sum, g) => sum + g.current, 0)
   const overallProgress = totalTarget > 0 ? (totalCurrent / totalTarget) * 100 : 0
 
   return (
@@ -111,6 +112,25 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
+                  <Label>Icon</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {iconOptions.map((icon) => (
+                      <button
+                        key={icon}
+                        type="button"
+                        className={`p-2 text-xl rounded-lg border transition-colors ${
+                          newGoal.icon === icon
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:bg-secondary'
+                        }`}
+                        onClick={() => setNewGoal({ ...newGoal, icon })}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="goal-name">Tên mục tiêu</Label>
                   <Input
                     id="goal-name"
@@ -130,7 +150,17 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="goal-deadline">Hạn hoàn thành (tùy chọn)</Label>
+                  <Label htmlFor="goal-current">Số tiền hiện có (VND)</Label>
+                  <Input
+                    id="goal-current"
+                    type="number"
+                    placeholder="0"
+                    value={newGoal.current}
+                    onChange={(e) => setNewGoal({ ...newGoal, current: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="goal-deadline">Hạn hoàn thành</Label>
                   <Input
                     id="goal-deadline"
                     type="date"
@@ -138,8 +168,8 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
                     onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
                   />
                 </div>
-                <Button onClick={handleAddGoal} className="w-full" disabled={loading}>
-                  {loading ? 'Đang thêm...' : 'Thêm mục tiêu'}
+                <Button onClick={handleAddGoal} className="w-full">
+                  Thêm mục tiêu
                 </Button>
               </div>
             </DialogContent>
@@ -172,9 +202,9 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
           </Card>
         ) : (
           goals.map((goal) => {
-            const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100
-            const remaining = Number(goal.target_amount) - Number(goal.current_amount)
-            const isComplete = goal.status === 'completed' || progress >= 100
+            const progress = (goal.current / goal.target) * 100
+            const remaining = goal.target - goal.current
+            const isComplete = progress >= 100
 
             return (
               <Card key={goal.id} className={isComplete ? 'border-success/50 bg-success/5' : ''}>
@@ -189,7 +219,7 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
                   </Button>
 
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="text-3xl">💰</span>
+                    <span className="text-3xl">{goal.icon}</span>
                     <div>
                       <h3 className="font-semibold">{goal.name}</h3>
                       {goal.deadline && (
@@ -213,59 +243,20 @@ export function GoalsView({ goals: initialGoals }: GoalsViewProps) {
                     />
                     <div className="flex justify-between text-sm">
                       <span className="text-success font-medium">
-                        {formatCurrency(Number(goal.current_amount))}
+                        {formatCurrency(goal.current)}
                       </span>
                       <span className="text-muted-foreground">
-                        / {formatCurrency(Number(goal.target_amount))}
+                        / {formatCurrency(goal.target)}
                       </span>
                     </div>
                     {!isComplete && (
-                      <>
-                        <p className="text-xs text-muted-foreground text-center">
-                          Còn thiếu {formatCurrency(remaining)}
-                        </p>
-                        <Dialog open={addAmountDialog === goal.id} onOpenChange={(open) => !open && setAddAmountDialog(null)}>
-                          <DialogTrigger asChild>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="w-full"
-                              onClick={() => setAddAmountDialog(goal.id)}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Thêm tiền
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Thêm tiền vào "{goal.name}"</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 pt-4">
-                              <div className="space-y-2">
-                                <Label htmlFor="add-amount">Số tiền (VND)</Label>
-                                <Input
-                                  id="add-amount"
-                                  type="number"
-                                  placeholder="0"
-                                  value={addAmount}
-                                  onChange={(e) => setAddAmount(e.target.value)}
-                                />
-                              </div>
-                              <Button 
-                                onClick={() => handleAddAmount(goal.id)} 
-                                className="w-full"
-                                disabled={loading}
-                              >
-                                {loading ? 'Đang thêm...' : 'Xác nhận'}
-                              </Button>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      </>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Còn thiếu {formatCurrency(remaining)}
+                      </p>
                     )}
                     {isComplete && (
                       <p className="text-xs text-success text-center font-medium">
-                        Hoàn thành!
+                        🎉 Hoàn thành!
                       </p>
                     )}
                   </div>

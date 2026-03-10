@@ -11,95 +11,43 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Category } from "@/lib/database.types"
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES, Transaction } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import {
-  Utensils,
-  Car,
-  ShoppingBag,
-  Home,
-  Gamepad2,
-  HeartPulse,
-  GraduationCap,
-  Wallet,
-  Gift,
-  Banknote,
-  TrendingUp,
-  MoreHorizontal,
-} from "lucide-react"
 
 interface AddTransactionDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onAdd: (data: {
-    amount: number
-    type: 'income' | 'expense'
-    category_id: string
-    description?: string
-    date: string
-  }) => Promise<{ success: boolean; error?: string }>
-  categories: Category[]
+  onAdd: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void
 }
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  'Ăn uống': Utensils,
-  'Di chuyển': Car,
-  'Mua sắm': ShoppingBag,
-  'Nhà cửa': Home,
-  'Giải trí': Gamepad2,
-  'Sức khỏe': HeartPulse,
-  'Giáo dục': GraduationCap,
-  'Lương': Wallet,
-  'Thưởng': Gift,
-  'Đầu tư': TrendingUp,
-  'Kinh doanh': Banknote,
-}
-
-export function AddTransactionDialog({ open, onOpenChange, onAdd, categories }: AddTransactionDialogProps) {
+export function AddTransactionDialog({ open, onOpenChange, onAdd }: AddTransactionDialogProps) {
   const [type, setType] = useState<'income' | 'expense'>('expense')
   const [amount, setAmount] = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const [category, setCategory] = useState('')
   const [description, setDescription] = useState('')
   const [date, setDate] = useState(new Date().toISOString().split('T')[0])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
-  const filteredCategories = categories.filter(c => c.type === type)
+  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
     
-    if (!amount || !categoryId) {
-      setError('Vui lòng điền đầy đủ thông tin')
-      return
-    }
+    if (!amount || !category || !description) return
 
-    setLoading(true)
-    const result = await onAdd({
+    onAdd({
       type,
       amount: parseFloat(amount),
-      category_id: categoryId,
-      description: description || undefined,
+      category,
+      description,
       date,
     })
 
-    if (result.success) {
-      // Reset form
-      setAmount('')
-      setCategoryId('')
-      setDescription('')
-      setDate(new Date().toISOString().split('T')[0])
-      onOpenChange(false)
-    } else {
-      setError(result.error || 'Có lỗi xảy ra')
-    }
-    setLoading(false)
-  }
-
-  const getIcon = (categoryName: string) => {
-    const IconComponent = iconMap[categoryName] || MoreHorizontal
-    return <IconComponent className="h-5 w-5" />
+    // Reset form
+    setAmount('')
+    setCategory('')
+    setDescription('')
+    setDate(new Date().toISOString().split('T')[0])
+    onOpenChange(false)
   }
 
   return (
@@ -122,7 +70,7 @@ export function AddTransactionDialog({ open, onOpenChange, onAdd, categories }: 
               )}
               onClick={() => {
                 setType('expense')
-                setCategoryId('')
+                setCategory('')
               }}
             >
               Chi tiêu
@@ -137,7 +85,7 @@ export function AddTransactionDialog({ open, onOpenChange, onAdd, categories }: 
               )}
               onClick={() => {
                 setType('income')
-                setCategoryId('')
+                setCategory('')
               }}
             >
               Thu nhập
@@ -162,19 +110,19 @@ export function AddTransactionDialog({ open, onOpenChange, onAdd, categories }: 
           <div className="space-y-2">
             <Label>Danh mục</Label>
             <div className="grid grid-cols-4 gap-2">
-              {filteredCategories.map((cat) => (
+              {categories.map((cat) => (
                 <button
                   key={cat.id}
                   type="button"
                   className={cn(
                     "flex flex-col items-center gap-1 rounded-lg p-3 text-xs transition-colors border",
-                    categoryId === cat.id
+                    category === cat.name
                       ? "border-primary bg-primary/10"
                       : "border-border bg-secondary hover:bg-secondary/80"
                   )}
-                  onClick={() => setCategoryId(cat.id)}
+                  onClick={() => setCategory(cat.name)}
                 >
-                  {getIcon(cat.name)}
+                  <span className="text-lg">{cat.icon}</span>
                   <span className="truncate w-full text-center">{cat.name}</span>
                 </button>
               ))}
@@ -183,13 +131,14 @@ export function AddTransactionDialog({ open, onOpenChange, onAdd, categories }: 
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Mô tả (tùy chọn)</Label>
+            <Label htmlFor="description">Mô tả</Label>
             <Textarea
               id="description"
               placeholder="Nhập mô tả giao dịch..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
+              required
             />
           </div>
 
@@ -205,13 +154,9 @@ export function AddTransactionDialog({ open, onOpenChange, onAdd, categories }: 
             />
           </div>
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-
           {/* Submit */}
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Đang thêm...' : 'Thêm giao dịch'}
+          <Button type="submit" className="w-full">
+            Thêm giao dịch
           </Button>
         </form>
       </DialogContent>

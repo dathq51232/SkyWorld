@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Transaction } from "@/lib/database.types"
+import { Transaction, formatCurrency, formatDate, ALL_CATEGORIES } from "@/lib/types"
 import { Search, Trash2, TrendingDown, TrendingUp, Filter } from "lucide-react"
 import {
   DropdownMenu,
@@ -15,41 +15,21 @@ import {
 
 interface TransactionsListProps {
   transactions: Transaction[]
-  onDelete: (id: string) => Promise<{ success: boolean; error?: string }>
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('vi-VN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
+  onDelete: (id: string) => void
 }
 
 export function TransactionsList({ transactions, onDelete }: TransactionsListProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [filterType, setFilterType] = useState<'all' | 'income' | 'expense'>('all')
-  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const handleDelete = async (id: string) => {
-    setDeletingId(id)
-    await onDelete(id)
-    setDeletingId(null)
+  const getCategoryIcon = (categoryName: string) => {
+    const category = ALL_CATEGORIES.find(c => c.name === categoryName)
+    return category?.icon || '📦'
   }
 
   const filteredTransactions = transactions.filter(t => {
-    const description = t.description || ''
-    const categoryName = t.category?.name || ''
-    const matchesSearch = description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          categoryName.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          t.category.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesType = filterType === 'all' || t.type === filterType
     return matchesSearch && matchesType
   })
@@ -103,19 +83,13 @@ export function TransactionsList({ transactions, onDelete }: TransactionsListPro
                 key={transaction.id}
                 className="flex items-center gap-4 rounded-lg bg-secondary/50 p-4 transition-colors hover:bg-secondary group"
               >
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background">
-                  {transaction.type === 'income' ? (
-                    <TrendingUp className="h-5 w-5 text-success" />
-                  ) : (
-                    <TrendingDown className="h-5 w-5 text-destructive" />
-                  )}
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background text-lg">
+                  {getCategoryIcon(transaction.category)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">
-                    {transaction.description || transaction.category?.name || 'Giao dịch'}
-                  </p>
+                  <p className="font-medium truncate">{transaction.description}</p>
                   <p className="text-sm text-muted-foreground">
-                    {transaction.category?.name || 'Không xác định'} • {formatDate(transaction.date)}
+                    {transaction.category} • {formatDate(transaction.date)}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -125,12 +99,16 @@ export function TransactionsList({ transactions, onDelete }: TransactionsListPro
                     {transaction.type === 'income' ? '+' : '-'}
                     {formatCurrency(transaction.amount)}
                   </span>
+                  {transaction.type === 'income' ? (
+                    <TrendingUp className="h-4 w-4 text-success" />
+                  ) : (
+                    <TrendingDown className="h-4 w-4 text-destructive" />
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
                     className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(transaction.id)}
-                    disabled={deletingId === transaction.id}
+                    onClick={() => onDelete(transaction.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

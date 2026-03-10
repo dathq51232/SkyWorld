@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Transaction } from "@/lib/database.types"
+import { formatCurrency, ALL_CATEGORIES, Transaction } from "@/lib/types"
 import {
   BarChart,
   Bar,
@@ -28,26 +28,20 @@ const COLORS = [
   'oklch(0.5 0.02 250)',
 ]
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(amount)
-}
-
 export function AnalyticsView({ transactions }: AnalyticsViewProps) {
   // Calculate expense by category
   const expenseByCategory = transactions
     .filter(t => t.type === 'expense')
     .reduce((acc, t) => {
-      const categoryName = t.category?.name || 'Khác'
-      acc[categoryName] = (acc[categoryName] || 0) + Number(t.amount)
+      acc[t.category] = (acc[t.category] || 0) + t.amount
       return acc
     }, {} as Record<string, number>)
 
   const categoryData = Object.entries(expenseByCategory)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => {
+      const cat = ALL_CATEGORIES.find(c => c.name === name)
+      return { name, value, icon: cat?.icon || '📦' }
+    })
     .sort((a, b) => b.value - a.value)
 
   const totalExpense = categoryData.reduce((sum, item) => sum + item.value, 0)
@@ -56,13 +50,15 @@ export function AnalyticsView({ transactions }: AnalyticsViewProps) {
   const incomeByCategory = transactions
     .filter(t => t.type === 'income')
     .reduce((acc, t) => {
-      const categoryName = t.category?.name || 'Khác'
-      acc[categoryName] = (acc[categoryName] || 0) + Number(t.amount)
+      acc[t.category] = (acc[t.category] || 0) + t.amount
       return acc
     }, {} as Record<string, number>)
 
   const incomeData = Object.entries(incomeByCategory)
-    .map(([name, value]) => ({ name, value }))
+    .map(([name, value]) => {
+      const cat = ALL_CATEGORIES.find(c => c.name === name)
+      return { name, value, icon: cat?.icon || '💵' }
+    })
     .sort((a, b) => b.value - a.value)
 
   const totalIncome = incomeData.reduce((sum, item) => sum + item.value, 0)
@@ -83,55 +79,50 @@ export function AnalyticsView({ transactions }: AnalyticsViewProps) {
             <CardTitle className="text-lg font-semibold">Chi tiêu theo danh mục</CardTitle>
           </CardHeader>
           <CardContent>
-            {categoryData.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
-                Chưa có chi tiêu nào
-              </p>
-            ) : (
-              <div className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-                    <XAxis 
-                      type="number" 
-                      tickFormatter={formatYAxis}
-                      className="text-xs fill-muted-foreground"
-                    />
-                    <YAxis 
-                      type="category" 
-                      dataKey="name" 
-                      width={100}
-                      className="text-xs fill-muted-foreground"
-                    />
-                    <Tooltip
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload
-                          const percentage = ((data.value / totalExpense) * 100).toFixed(1)
-                          return (
-                            <div className="rounded-lg bg-card p-3 shadow-lg border border-border">
-                              <p className="font-medium">{data.name}</p>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {formatCurrency(data.value)}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                {percentage}% tổng chi tiêu
-                              </p>
-                            </div>
-                          )
-                        }
-                        return null
-                      }}
-                    />
-                    <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                      {categoryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={categoryData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                  <XAxis 
+                    type="number" 
+                    tickFormatter={formatYAxis}
+                    className="text-xs fill-muted-foreground"
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    width={80}
+                    className="text-xs fill-muted-foreground"
+                    tickFormatter={(value, index) => `${categoryData[index]?.icon || ''} ${value}`}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload
+                        const percentage = ((data.value / totalExpense) * 100).toFixed(1)
+                        return (
+                          <div className="rounded-lg bg-card p-3 shadow-lg border border-border">
+                            <p className="font-medium">{data.icon} {data.name}</p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              {formatCurrency(data.value)}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {percentage}% tổng chi tiêu
+                            </p>
+                          </div>
+                        )
+                      }
+                      return null
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -147,12 +138,15 @@ export function AnalyticsView({ transactions }: AnalyticsViewProps) {
                   Chưa có thu nhập nào
                 </p>
               ) : (
-                incomeData.map((item) => {
+                incomeData.map((item, index) => {
                   const percentage = (item.value / totalIncome) * 100
                   return (
                     <div key={item.name} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="font-medium">{item.name}</span>
+                        <span className="flex items-center gap-2">
+                          <span className="text-lg">{item.icon}</span>
+                          <span className="font-medium">{item.name}</span>
+                        </span>
                         <span className="font-semibold text-success">
                           {formatCurrency(item.value)}
                         </span>

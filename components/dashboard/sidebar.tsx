@@ -1,6 +1,5 @@
 "use client"
 
-import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -9,9 +8,9 @@ import {
   PieChart,
   Target,
   Settings,
+  LogOut,
   Wallet,
   X,
-  Shield,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -19,7 +18,6 @@ interface SidebarProps {
   onTabChange: (tab: string) => void
   isMobileOpen: boolean
   onMobileClose: () => void
-  isAdmin?: boolean
 }
 
 const menuItems = [
@@ -30,7 +28,7 @@ const menuItems = [
   { id: "settings", label: "Cài đặt", icon: Settings },
 ]
 
-export function Sidebar({ activeTab, onTabChange, isMobileOpen, onMobileClose, isAdmin }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, isMobileOpen, onMobileClose }: SidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -85,21 +83,16 @@ export function Sidebar({ activeTab, onTabChange, isMobileOpen, onMobileClose, i
           ))}
         </nav>
 
-        {/* Admin Link */}
-        {isAdmin && (
-          <div className="border-t border-sidebar-border p-4">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-3 px-4 py-2.5 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              asChild
-            >
-              <Link href="/admin">
-                <Shield className="h-5 w-5" />
-                Admin Dashboard
-              </Link>
-            </Button>
-          </div>
-        )}
+        {/* Logout */}
+        <div className="border-t border-sidebar-border p-4">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 px-4 py-2.5 text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <LogOut className="h-5 w-5" />
+            Đăng xuất
+          </Button>
+        </div>
       </aside>
     </>
   )

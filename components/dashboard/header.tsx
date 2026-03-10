@@ -4,26 +4,14 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, Menu, Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Profile } from "@/lib/database.types"
 
 interface HeaderProps {
   title: string
   onMenuClick: () => void
   onAddTransaction: () => void
-  profile?: Profile | null
 }
 
-function getInitials(name: string | null) {
-  if (!name) return 'U'
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-}
-
-export function Header({ title, onMenuClick, onAddTransaction, profile }: HeaderProps) {
+export function Header({ title, onMenuClick, onAddTransaction }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
       <Button
@@ -62,9 +50,9 @@ export function Header({ title, onMenuClick, onAddTransaction, profile }: Header
 
         {/* User Avatar */}
         <Avatar className="h-8 w-8">
-          <AvatarImage src={profile?.avatar_url || undefined} alt="User" />
+          <AvatarImage src="" alt="User" />
           <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-            {getInitials(profile?.full_name || null)}
+            NV
           </AvatarFallback>
         </Avatar>
       </div>
